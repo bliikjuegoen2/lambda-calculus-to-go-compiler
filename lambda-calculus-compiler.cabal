@@ -26,6 +26,9 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Operation
+      Counter
+      CharOperation
   other-modules:
       Paths_lambda_calculus_compiler
   hs-source-dirs:
