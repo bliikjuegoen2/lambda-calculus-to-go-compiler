@@ -1,9 +1,6 @@
-import CharOperation(filterChar)
-import Operation(runOperation, pipe, idOperation)
-import Control.Applicative (some)
-import Counter (counterOn)
-import Data.Functor ((<&>))
+import Operation(runOperation, pipe)
 import LineNumber (withLocation)
+import Tokenizer (tokenizer)
 
 filename :: String
 filename = "test/src.lc"
@@ -15,10 +12,7 @@ main = do
     -- let op = some $ matchChar 'a'
 
     let op 
-            = withLocation id
-            `pipe` ((,) <$> some (filterChar (\((linenumber, col), char) rest' -> 
-                let rest = snd <$> rest' in "On line " ++ show linenumber ++ " column " ++ show col ++ ": Cannot match 'a' with " ++ show char ++ "; there is " ++ show rest ++ " left") 
-            ((== 'a') . snd)) <*> some idOperation)
+            = withLocation id `pipe` tokenizer
 
     let x = snd $ runOperation op src
 

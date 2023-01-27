@@ -9,7 +9,7 @@ import Data.Function ((&))
 
 instance BasicError String where 
     endOfStream = "End of the Stream"
-    notEndOfStream rest = "Not the end of Stream; there is " ++ show rest ++ " left"
+    notEndOfStream rest out= "Not the end of Stream; " ++ show out++ " was parsed; there is " ++ show rest ++ " left"
 
 filterChar :: (char -> [char] -> String) -> (char -> Bool) -> Operation String char char 
 filterChar makeError condition = idOperation & filterOutput makeError condition

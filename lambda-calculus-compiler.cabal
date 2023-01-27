@@ -30,6 +30,7 @@ library
       Lib
       LineNumber
       Operation
+      Tokenizer
       Util
   other-modules:
       Paths_lambda_calculus_compiler

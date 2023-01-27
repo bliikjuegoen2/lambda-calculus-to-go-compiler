@@ -104,7 +104,7 @@ instance (Semigroup err) => Monad (Operation err input) where
 
 class BasicError err where 
     endOfStream :: err 
-    notEndOfStream :: (Show input) => [input] -> err
+    notEndOfStream :: (Show input, Show output) => [input] -> output -> err
 
 idOperation :: (BasicError err) => Operation err a a 
 idOperation = Operation $ \case 
@@ -131,14 +131,14 @@ matchOutput makeError matched = filterOutput (makeError matched) (matched ==)
 accumOutput :: (s -> a -> (s, b)) -> s -> Operation err a (s, [b])
 accumOutput f accum = Operation $ \input-> ([], Output $ mapAccumL f accum input)
 
-pipe :: (Semigroup err, BasicError err, Show b) => Operation err a [b] -> Operation err b c -> Operation err a c
+pipe :: (Semigroup err, BasicError err, Show b, Show c) => Operation err a [b] -> Operation err b c -> Operation err a c
 pipe f g = Operation $ \input-> sequenceA $ do 
     (rest, outputF) <- sequenceA $ runOperation f input
     (rest', outputG) <- sequenceA $ runOperation g outputF
     if not $ null rest' 
-    then raise $ notEndOfStream rest'
+    then raise $ notEndOfStream rest' outputG
     else return (rest,outputG)
 
-compose :: (Semigroup err, BasicError err, Show b) => Operation err b c -> Operation err a [b] -> Operation err a c
+compose :: (Semigroup err, BasicError err, Show b, Show c) => Operation err b c -> Operation err a [b] -> Operation err a c
 compose = flip pipe
 
