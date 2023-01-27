@@ -14,6 +14,7 @@ module Operation (
     , matchOutput
     , accumOutput
     , pipe
+    , compose
 ) where
 import Control.Applicative (Alternative (empty, (<|>)))
 import Control.Arrow ((>>>))
@@ -137,3 +138,7 @@ pipe f g = Operation $ \input-> sequenceA $ do
     if not $ null rest' 
     then raise $ notEndOfStream rest'
     else return (rest,outputG)
+
+compose :: (Semigroup err, BasicError err, Show b) => Operation err b c -> Operation err a [b] -> Operation err a c
+compose = flip pipe
+

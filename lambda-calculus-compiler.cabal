@@ -25,10 +25,12 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
-      Operation
-      Counter
       CharOperation
+      Counter
+      Lib
+      LineNumber
+      Operation
+      Util
   other-modules:
       Paths_lambda_calculus_compiler
   hs-source-dirs:

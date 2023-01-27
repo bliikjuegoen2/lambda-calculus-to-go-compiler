@@ -8,7 +8,7 @@ import Data.Functor ((<&>))
 withCount :: a -> b -> (a, (a, b))
 withCount count char = (count, (count, char))
 
-counterOn :: (Semigroup err) => (char -> Bool) -> (char -> Bool) -> Operation err char [(Integer,char)]
+counterOn :: (Semigroup err) => (char -> Bool) -> (char -> Bool) -> Operation err char [(Int,char)]
 counterOn isReset condition 
     = accumOutput 
         (
@@ -17,8 +17,8 @@ counterOn isReset condition
                     | condition char -> withCount (accum + 1) char 
                     | otherwise -> withCount accum char
         )
-        (0 :: Integer) 
+        (0 :: Int) 
     <&> snd
 
-counter :: (Semigroup err, Eq char) => char -> char -> Operation err char [(Integer,char)]
+counter :: (Semigroup err, Eq char) => char -> char -> Operation err char [(Int,char)]
 counter resetChar matched = counterOn (resetChar ==) (matched ==)
