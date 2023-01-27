@@ -1,5 +1,5 @@
 module Tokenizer (
-    Token(Identifier, ParenL, ParenR, LambdaL, LambdaR)
+    Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, Set, In, Sep)
     , Tokenizer
     , tokenizer
 ) where
@@ -18,6 +18,7 @@ data Token
     | LambdaR
     | Set
     | In
+    | Sep
     deriving (Show, Eq)
 
 type Tokenizer = Operation String ((Int,Int), Char) [((Int,Int), Token)]
@@ -42,7 +43,7 @@ getCharToken :: (Show a1, Show a2) => Char -> Operation String ((a1, a2), Char) 
 getCharToken char = filterChar (errorMessage [char]) (snd >>> (char ==))
 
 getSpecial :: Char -> Token -> TokenizerComponent
-getSpecial char token = (token <$) <$> filterChar (errorMessage [char]) (snd >>> (char ==))
+getSpecial char token = (token <$) <$> getCharToken char
 
 getSpecialChars :: TokenizerComponent
 getSpecialChars = asum $ uncurry getSpecial <$> [
@@ -50,6 +51,7 @@ getSpecialChars = asum $ uncurry getSpecial <$> [
     , (')', ParenR)
     , ('[', LambdaL)
     , (']', LambdaR)
+    , (';', Sep)
     ]
 
 getKeyword :: String -> Token -> TokenizerComponent

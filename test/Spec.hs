@@ -1,6 +1,7 @@
 import Operation(runOperation, pipe)
 import LineNumber (withLocation)
 import Tokenizer (tokenizer)
+import Parser (parser)
 
 filename :: String
 filename = "test/src.lc"
@@ -11,9 +12,8 @@ main = do
 
     -- let op = some $ matchChar 'a'
 
-    let op 
-            = withLocation id `pipe` tokenizer
+    let op = withLocation id `pipe` tokenizer `pipe` parser
 
     let x = snd $ runOperation op src
 
-    print x
+    putStrLn $ take 10000 $ show x

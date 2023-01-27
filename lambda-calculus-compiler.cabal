@@ -30,6 +30,7 @@ library
       Lib
       LineNumber
       Operation
+      Parser
       Tokenizer
       Util
   other-modules:

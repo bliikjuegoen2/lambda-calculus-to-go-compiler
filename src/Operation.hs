@@ -13,6 +13,7 @@ module Operation (
     , filterOutput
     , matchOutput
     , accumOutput
+    , eitherOutput
     , pipe
     , compose
 ) where
@@ -127,6 +128,12 @@ filterOutput makeError condition = modifyOutputWithRest $ \(rest, output)-> case
 
 matchOutput :: (Eq output) => (output -> output -> [input] -> err) -> output -> Operation err input output -> Operation err input output
 matchOutput makeError matched = filterOutput (makeError matched) (matched ==)
+
+eitherOutput :: (err' -> err) -> (a -> Either err' b) -> Operation err input a -> Operation err input b
+eitherOutput makeErr f = modifyOutputWithRest $ \(rest, output)-> case f <$> output of 
+    Output (Right x) -> (rest, Output x)
+    Output (Left err) -> (rest, raise $ makeErr err)
+    Err err -> (rest, Err err)
 
 accumOutput :: (s -> a -> (s, b)) -> s -> Operation err a (s, [b])
 accumOutput f accum = Operation $ \input-> ([], Output $ mapAccumL f accum input)
