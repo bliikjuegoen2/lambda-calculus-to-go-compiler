@@ -4,9 +4,12 @@ module Desugarer (
     , desugarer
     , cleanContext
     , evalFuncCount
+    , evalFuncCallCount
     , evalRefVars
     , evalVars
     , finalizeContext
+    , scanTravL
+    , scanTravR
 ) where
 import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef))
 import Data.Function ((&))
@@ -14,6 +17,7 @@ import Control.Arrow (second, (>>>))
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Bool.HT (if')
+import Data.List (mapAccumL, mapAccumR)
 
 data NodeLL metaData
     = Var String 
@@ -52,6 +56,7 @@ data Context = Context {
     linNum :: Int 
     , colNum :: Int
     , funcCount :: Int
+    , funcCallCount :: Int
     , refVars :: S.Set String -- the difference between variables and refVars is that variables reprensents all the variables in the context while refVars just represent the referenced ones i.e variables >= refVars
     , variables :: M.Map String Int
 }
@@ -65,12 +70,14 @@ initContext = Context {
     linNum = 0
     , colNum = 0
     , funcCount = 0
+    , funcCallCount = 0
     , refVars = S.empty
     , variables = M.empty 
 }
 
 data ContextAction = ContextAction {
     isIncrementingFuncCount :: Bool
+    , isIncrementingFuncCallCount :: Bool
     , refVarsAction :: RefVarsAction
     , variablesAction :: VariablesAction
 }
@@ -94,6 +101,7 @@ data VariablesAction
 noAction :: ContextAction
 noAction = ContextAction {
     isIncrementingFuncCount = False
+    , isIncrementingFuncCallCount = False
     , refVarsAction = NoRefVarsAction
     , variablesAction = NoVariablesAction
 }
@@ -124,6 +132,10 @@ buildFunc arg body context = Func arg body & withAction context
     noAction { isIncrementingFuncCount = True, refVarsAction = RemoveRefVar arg, variablesAction = AddVar arg }
     noAction { variablesAction = RemoveVar arg}
 
+buildApply :: NodeLLWithMetaData ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context) -> (Int, Int) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
+buildApply func arg context = Apply func arg & withActionL context 
+    noAction { isIncrementingFuncCallCount = True }
+
 desugarer :: Desugarer 
 desugarer (context, node) = case node of 
     Variable varname -> buildVars varname context
@@ -132,11 +144,11 @@ desugarer (context, node) = case node of
         (desugarer body) 
         args
     Call func args -> foldl 
-        (\intermediate arg-> Apply intermediate arg & withContext context) 
+        (\intermediate arg-> buildApply intermediate arg context) 
         (desugarer func)
         (desugarer <$> args)
     VariableDef defs expr -> foldr 
-        (\(varname, definition) innerExpr -> Apply (buildFunc varname innerExpr context) definition & withContext context) 
+        (\(varname, definition) innerExpr -> buildApply (buildFunc varname innerExpr context) definition context) 
         (desugarer expr) 
         (second desugarer <$> defs)
 
@@ -146,12 +158,25 @@ cleanContext ((linNum, colNum), action, context) = (action, context {
     , colNum = colNum
 })
 
+scanTravL :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> t b
+scanTravL f acc = mapAccumL f acc >>> snd
+
+scanTravR :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> t b
+scanTravR f acc = mapAccumR f acc >>> snd
+
 evalFuncCount :: Int -> (ContextAction, Context) -> (Int, (ContextAction, Context))
 evalFuncCount curFuncCount (action, context) = if action & isIncrementingFuncCount 
     then ret $ curFuncCount + 1 
     else ret curFuncCount
     where 
         ret newFuncCount = (newFuncCount, (action, context {funcCount = newFuncCount}))
+
+evalFuncCallCount :: Int -> (ContextAction, Context) -> (Int, (ContextAction, Context))
+evalFuncCallCount curFuncCallCount (action, context) = if action & isIncrementingFuncCallCount 
+    then ret $ curFuncCallCount + 1 
+    else ret curFuncCallCount
+    where 
+        ret newFuncCallCount = (newFuncCallCount, (action, context {funcCallCount = newFuncCallCount}))
 
 evalRefVars :: S.Set String -> (ContextAction, Context) -> (S.Set String, (ContextAction, Context))
 evalRefVars curRefVars (action, context) = case action & refVarsAction of
