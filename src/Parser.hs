@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
     Node(Variable, Function, Call, VariableDef)
+    , NodeWithMetaData
     , parser
     , parseExpr
 ) where
