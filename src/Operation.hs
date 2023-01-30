@@ -16,6 +16,7 @@ module Operation (
     , eitherOutput
     , pipe
     , compose
+    , ioOutput
 ) where
 import Control.Applicative (Alternative (empty, (<|>)))
 import Control.Arrow ((>>>))
@@ -31,6 +32,10 @@ ret = Output
 
 raise :: err -> OperationOutput err output
 raise = Err
+
+ioOutput :: OperationOutput err output -> output -> IO output
+ioOutput (Err _) out = return out
+ioOutput (Output out) _ = return out 
 
 -- Operation Output is just a Semigroup, NOT a monoid
 -- The semigroup prioritizes errors over result

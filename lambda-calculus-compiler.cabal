@@ -28,6 +28,7 @@ library
       CharOperation
       Counter
       Desugarer
+      GoCodeGen
       Lib
       LineNumber
       OpCode

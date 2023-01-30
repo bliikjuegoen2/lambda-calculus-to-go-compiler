@@ -3,6 +3,8 @@
 module OpCode (
     buildIntructions
     , initContext
+    , Context(funcs)
+    , OpCode(PushVar, PushFunc, Call, Ret, JumpAddr, Pop)
 ) where
 
 import qualified Desugarer as D
@@ -22,7 +24,7 @@ data OpCode
 
 data Context = Context {
     vars :: M.Map String Int
-    , funcs :: [[OpCode]] -- the function number must be stored because the ordering of the functions might get messed up
+    , funcs :: [[OpCode]] 
 } deriving Show
 
 initContext :: Context 
@@ -55,7 +57,7 @@ buildIntruction context (nodeContext, node, _) = case node of
                         (curContext, [PushVar captureRef] ++ instrs)
                     )
                 ) 
-                (0 :: Int, M.empty, (context, [PushFunc jumpAddr]))
+                (1 :: Int, M.empty, (context, [PushFunc jumpAddr]))
             >>> (\(count, captureVars, (curContext', instrs))-> do 
                     (curContext, funcInstrs) <- buildIntruction 
                         curContext' { vars = captureVars & M.insert arg count } 
@@ -81,7 +83,7 @@ buildIntruction context (nodeContext, node, _) = case node of
         return (context'', arg ++ func ++ [Call, JumpAddr jumpAddr])
     D.Null node' -> buildIntruction context node'
     where 
-                jumpAddr = (+) <$> D.funcCount <*> D.funcCallCount >>> (+ (-1)) $ nodeContext
+                jumpAddr = (+) <$> D.funcCount <*> D.funcCallCount $ nodeContext
 
 buildIntructions :: Context -> [D.NodeLL D.Context] -> Either String (Context, [OpCode])
 buildIntructions context [] = return (context,[])
