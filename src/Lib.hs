@@ -17,4 +17,7 @@ compiler = withLocation id `pipe` tokenizer `pipe` parser
     <&> (fmap (desugarer >>> Null >>> fmap cleanContext 
     >>> scanTravL evalFuncCount 0 >>> scanTravL evalFuncCallCount 0
     >>> scanTravR evalRefVars S.empty >>> scanTravL evalVars M.empty
-    >>> fmap finalizeContext) >>> buildIntructions initContext) & eitherOutput id id
+    >>> fmap finalizeContext) 
+    >>> buildIntructions initContext
+    ) 
+    & eitherOutput id id

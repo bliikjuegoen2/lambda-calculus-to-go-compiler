@@ -1,7 +1,7 @@
 module Desugarer (
     NodeLL(Var, Func, Apply, Null)
     , NodeLLWithMetaData
-    , Context(linNum, colNum, refVars, variables, funcCount)
+    , Context(linNum, colNum, refVars, variables, funcCount, funcCallCount)
     , desugarer
     , cleanContext
     , evalFuncCount

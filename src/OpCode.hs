@@ -6,12 +6,10 @@ module OpCode (
 ) where
 
 import qualified Desugarer as D
-import Control.Arrow ((>>>), Arrow (second))
-import Control.Monad (join, (>=>))
 import qualified Data.Map as M
 import Data.Function ((&))
 import Data.Foldable (Foldable(toList))
-import Data.Functor ((<&>))
+import Control.Arrow ((>>>))
 
 data OpCode
     = PushVar Int
@@ -19,11 +17,12 @@ data OpCode
     | Call 
     | Ret 
     | Pop
+    | JumpAddr Int
     deriving Show 
 
 data Context = Context {
     vars :: M.Map String Int
-    , funcs :: [(Int, [OpCode])] -- the function number must be stored because the ordering of the functions might get messed up
+    , funcs :: [[OpCode]] -- the function number must be stored because the ordering of the functions might get messed up
 } deriving Show
 
 initContext :: Context 
@@ -56,20 +55,33 @@ buildIntruction context (nodeContext, node, _) = case node of
                         (curContext, [PushVar captureRef] ++ instrs)
                     )
                 ) 
-                (0 :: Int, M.empty, (context, [PushFunc $ D.funcCount nodeContext - 1]))
+                (0 :: Int, M.empty, (context, [PushFunc jumpAddr]))
             >>> (\(count, captureVars, (curContext', instrs))-> do 
                     (curContext, funcInstrs) <- buildIntruction 
                         curContext' { vars = captureVars & M.insert arg count } 
                         body 
-                    return (curContext' { funcs = (D.funcCount nodeContext - 1, funcInstrs ++ [Ret]):(curContext & funcs) }, instrs)
+                    return (
+                        curContext' { 
+                            funcs = ( 
+                                [JumpAddr jumpAddr] 
+                                ++ funcInstrs 
+                                ++ [Ret]
+                            )
+                            :(curContext & funcs) 
+                        }, 
+                        instrs
+                        )
                 )
             )
+            
 
     D.Apply func' arg' -> do 
         (context', arg) <- buildIntruction context arg'
         (context'', func) <- buildIntruction context' func'
-        return (context'', arg ++ func ++ [Call])
+        return (context'', arg ++ func ++ [Call, JumpAddr jumpAddr])
     D.Null node' -> buildIntruction context node'
+    where 
+                jumpAddr = (+) <$> D.funcCount <*> D.funcCallCount >>> (+ (-1)) $ nodeContext
 
 buildIntructions :: Context -> [D.NodeLL D.Context] -> Either String (Context, [OpCode])
 buildIntructions context [] = return (context,[])
