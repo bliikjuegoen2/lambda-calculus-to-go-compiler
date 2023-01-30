@@ -1,6 +1,7 @@
 module Desugarer (
-    NodeLL(Null)
-    , Context
+    NodeLL(Var, Func, Apply, Null)
+    , NodeLLWithMetaData
+    , Context(linNum, colNum, refVars, variables, funcCount)
     , desugarer
     , cleanContext
     , evalFuncCount
@@ -120,8 +121,8 @@ withActionL context action = withAction context action noAction
 withActionR :: (Int, Int) -> ContextAction -> NodeLL ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
 withActionR context = withAction context noAction
 
-withContext :: (Int, Int) -> NodeLL ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
-withContext context = withAction context noAction noAction
+-- withContext :: (Int, Int) -> NodeLL ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
+-- withContext context = withAction context noAction noAction
 
 buildVars :: String -> (Int, Int) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
 buildVars varname context = Var varname & withActionR context noAction 
