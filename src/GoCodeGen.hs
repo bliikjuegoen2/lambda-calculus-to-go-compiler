@@ -44,7 +44,7 @@ goCodeGen (Call returnAddr) = "\
 \\t\tscope_ptr = scope_ptr + stack_ptr\n\
 \\t\tstack_ptr = 1\n\
 \\tdefault:\n\
-\\t\tfmt.Println(\"type error\")\n\
+\\t\tfmt.Println(\"type error: \" + reg.show() + \" is not a function\")\n\
 \\t\treturn\n\
 \\t}\n\
 \\tgoto JUMP\n"
@@ -53,7 +53,7 @@ goCodeGen (Ret argCount) = "\
 \\tcase WrappedInt:\n\
 \\t\tjump_addr = ret_addr.num\n\
 \\tdefault:\n\
-\\t\tfmt.Println(\"type error\")\n\
+\\t\tfmt.Println(\"type error: \" + ret_addr.show() + \" is not an int\")\n\
 \\t\treturn\n\
 \\t}\n\
 \\treg = stack[stack_ptr + scope_ptr]\n\
@@ -66,7 +66,7 @@ goCodeGen (Ret argCount) = "\
 \\t\tscope_ptr = prev_scope_ptr.num\n\
 \\t\tstack[stack_ptr + scope_ptr] = reg\n\
 \\tdefault:\n\
-\\t\tfmt.Println(\"type error\")\n\
+\\t\tfmt.Println(\"type error\" + prev_scope_ptr.show() + \" is not an int\")\n\
 \\t\treturn\n\
 \\t}\n\
 \\tgoto JUMP\n"
@@ -87,9 +87,10 @@ goCodeGenBoilerPlate jumpAddrNum code = "\
 \package main\n\
 \\n\
 \import \"fmt\"\n\
+\import \"strconv\"\n\
 \\n\
 \type Wrapped interface {\n\
-\\tis_wrapped() bool\n\
+\\tshow() string\n\
 \}\n\
 \\t\n\
 \type WrappedFunction struct {\n\
@@ -97,15 +98,15 @@ goCodeGenBoilerPlate jumpAddrNum code = "\
 \\tcontext []Wrapped\n\
 \}\n\
 \\n\
-\func (_ WrappedFunction) is_wrapped() bool {\n\
-\\treturn true\n\
+\func (_ WrappedFunction) show() string {\n\
+\\treturn \"[function]\"\n\
 \}\n\
 \type WrappedInt struct {\n\
 \\tnum int\n\
 \}\n\
 \\n\
-\func (_ WrappedInt) is_wrapped() bool {\n\
-\\treturn true\n\
+\func (i WrappedInt) show() string {\n\
+\\treturn strconv.FormatInt(int64(i.num), 10)\n\
 \}\n\
 \\n\
 \func main() {\n\
