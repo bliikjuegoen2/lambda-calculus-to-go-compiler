@@ -31,6 +31,7 @@ data Token
     | END
     | CLOSURE 
     | RUNCLOSURE
+    | BUILTIN
     deriving (Show, Eq)
 
 type Tokenizer = Operation String ((Int,Int), Char) [((Int,Int), Token)]
@@ -101,6 +102,7 @@ getKeywords = asum $ uncurry getKeyword <$> [
     , ("then", THEN)
     , ("else", ELSE)
     , ("end", END)
+    , ("builtin", BUILTIN)
     ]  
 
 getSpace :: Operation String ((Int, Int), Char) ((Int, Int), [Char])
