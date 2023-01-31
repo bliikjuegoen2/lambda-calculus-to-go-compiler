@@ -1,7 +1,7 @@
 module Tokenizer (
     Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, 
         Set, In, Sep, IntLiteral, IF, THEN, ELSE, END,
-        CLOSURE, RUNCLOSURE)
+        CLOSURE, RUNCLOSURE, BUILTIN)
     , Tokenizer
     , tokenizer
 ) where

@@ -1,13 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
-    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure)
+    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn)
     , NodeWithMetaData
     , parser
     , parseExpr
 ) where
     
 import Operation (Operation, eitherOutput, idOperation)
-import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE))
+import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN))
 import Control.Applicative (many, asum, Alternative (some))
 import CharOperation (filterChar)
 import Data.Function ((&))
@@ -24,6 +24,7 @@ data Node
     | IfStatement NodeWithMetaData NodeWithMetaData NodeWithMetaData
     | Closure NodeWithMetaData
     | EvalClosure NodeWithMetaData
+    | BuiltIn Int String 
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
@@ -34,6 +35,7 @@ instance Show Node where
     show (IfStatement cond ifTrue ifFalse) = show ("if", cond, "then", ifTrue, "else", ifFalse)
     show (Closure expr) = show ("[",expr,"]")
     show (EvalClosure expr) = show ("*", expr)
+    show (BuiltIn argc symbol) = show("builtin", argc, symbol)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -111,10 +113,14 @@ parseEvalClosure :: ParserComponent
 parseEvalClosure = (\expr->(fst expr, EvalClosure expr)) 
     <$ matchToken RUNCLOSURE <*> parseExpr
 
+parseBuiltIn :: ParserComponent
+parseBuiltIn = (\(context, argc) (_, symbol)-> (context, BuiltIn argc symbol)) 
+    <$ matchToken BUILTIN <*> parseIntLiteral <*> parseIdentifier
+
 -- to avoid recursive calls
 -- pretty much anything that can be put into a function call without parenthesis
 parseUnit :: ParserComponent
-parseUnit = asum [parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
+parseUnit = asum [parseBuiltIn, parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
 
 liftWithMetaData :: ((a, b1) -> b2 -> c) -> (a, b1) -> b2 -> (a, c)
 liftWithMetaData f = curry (first dupFirst >>> mix >>> second (uncurry f))
