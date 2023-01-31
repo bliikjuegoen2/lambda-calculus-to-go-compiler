@@ -8,8 +8,8 @@ import Operation (Operation, filterOutput, idOperation, BasicError (endOfStream,
 import Data.Function ((&))
 
 instance BasicError String where 
-    endOfStream = "End of the Stream"
-    notEndOfStream rest out= "Not the end of Stream; " ++ show out++ " was parsed; there is " ++ show rest ++ " left"
+    endOfStream = "End of the Stream\n"
+    notEndOfStream rest out= "Not the end of Stream; " ++ show out++ " was parsed; there is " ++ show rest ++ " left\n"
 
 filterChar :: (char -> [char] -> String) -> (char -> Bool) -> Operation String char char 
 filterChar makeError condition = idOperation & filterOutput makeError condition

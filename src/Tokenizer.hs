@@ -1,9 +1,9 @@
 module Tokenizer (
-    Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, Set, In, Sep, IntLiteral)
+    Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END)
     , Tokenizer
     , tokenizer
 ) where
-import Operation (Operation)
+import Operation (Operation (runOperation), filterOutput)
 import CharOperation (filterChar)
 import Control.Arrow ((>>>), Arrow (first, second))
 import Control.Applicative (some, Alternative (many, (<|>)), asum)
@@ -11,6 +11,7 @@ import LineNumber (Location(Location, getLocation))
 import Data.Char (isSpace, isDigit)
 import Data.Functor ((<&>), ($>))
 import Data.List (singleton)
+import Data.Function ((&))
 
 data Token
     = Identifier String 
@@ -22,6 +23,10 @@ data Token
     | In
     | Sep
     | IntLiteral Int
+    | IF 
+    | THEN 
+    | ELSE
+    | END
     deriving (Show, Eq)
 
 type Tokenizer = Operation String ((Int,Int), Char) [((Int,Int), Token)]
@@ -38,9 +43,12 @@ isSpecial char = char `elem` "()[]"
 cleanMetaData :: [((Int, Int), d)] -> ((Int, Int), [d])
 cleanMetaData = fmap (first Location) >>> sequenceA >>> first getLocation
 
+getIdentifierLike :: Operation String ((Int, Int), Char) ((Int, Int), [Char])
+getIdentifierLike = some (filterChar (errorMessage "an identifier") (snd >>> ((&&) <$> not . isSpecial <*> not . isSpace)))
+    <&> cleanMetaData
+
 getIdentifier :: TokenizerComponent
-getIdentifier = some (filterChar (errorMessage "an identifier") (snd >>> ((&&) <$> not . isSpecial <*> not . isSpace))) 
-    <&> (cleanMetaData >>> second Identifier) 
+getIdentifier = getIdentifierLike <&> second Identifier
 
 getIntLiteral :: TokenizerComponent
 getIntLiteral = (unsignedIntLiteral <|> explicitPositiveIntLiteral <|> negativeIntLiteral) -- initial character
@@ -75,12 +83,18 @@ getSpecialChars = asum $ uncurry getSpecial <$> [
     ]
 
 getKeyword :: String -> Token -> TokenizerComponent
-getKeyword keyword token = (sequenceA >>> fmap (cleanMetaData >>> fmap (const token))) $ getCharToken <$> keyword
+getKeyword keyword token = getIdentifierLike 
+    & filterOutput (errorMessage $ "the keyword: " ++ show keyword) (snd >>> (keyword ==)) 
+    <&> second (const token)
 
 getKeywords :: TokenizerComponent
 getKeywords = asum $ uncurry getKeyword <$> [
     ("set", Set)
     , ("in", In)
+    , ("if", IF)
+    , ("then", THEN)
+    , ("else", ELSE)
+    , ("end", END)
     ]  
 
 getSpace :: Operation String ((Int, Int), Char) ((Int, Int), [Char])

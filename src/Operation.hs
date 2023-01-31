@@ -17,6 +17,7 @@ module Operation (
     , pipe
     , compose
     , ioOutput
+    , printErr
 ) where
 import Control.Applicative (Alternative (empty, (<|>)))
 import Control.Arrow ((>>>))
@@ -154,3 +155,6 @@ pipe f g = Operation $ \input-> sequenceA $ do
 compose :: (Semigroup err, BasicError err, Show b, Show c) => Operation err b c -> Operation err a [b] -> Operation err a c
 compose = flip pipe
 
+printErr :: OperationOutput String output -> IO ()
+printErr (Err err) = putStrLn $ take 10000 err 
+printErr _ = return ()
