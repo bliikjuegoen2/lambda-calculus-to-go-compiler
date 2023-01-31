@@ -4,7 +4,7 @@ module OpCode (
     buildIntructions
     , initContext
     , Context(funcs)
-    , OpCode(PushVar, PushFunc, Call, Ret, JumpAddr, Pop, Exit)
+    , OpCode(PushVar, PushFunc, Call, Ret, JumpAddr, Pop, Exit, PushInt)
 ) where
 
 import qualified Desugarer as D
@@ -16,6 +16,7 @@ import Control.Arrow ((>>>))
 data OpCode
     = PushVar Int
     | PushFunc Int Int 
+    | PushInt Int
     | Call Int
     | Ret Int
     | Pop
@@ -83,6 +84,7 @@ buildIntruction context (nodeContext, node, _) = case node of
         (context'', func) <- buildIntruction context' func'
         return (context'', arg ++ func ++ [Call jumpAddr, JumpAddr jumpAddr])
     D.Null node' -> buildIntruction context node'
+    D.IntNodeLL int -> return (context, [PushInt int])
     where 
                 jumpAddr = (+) <$> D.funcCount <*> D.funcCallCount $ nodeContext
 

@@ -1,5 +1,5 @@
 module Desugarer (
-    NodeLL(Var, Func, Apply, Null)
+    NodeLL(Var, Func, Apply, Null, IntNodeLL)
     , NodeLLWithMetaData
     , Context(linNum, colNum, refVars, variables, funcCount, funcCallCount)
     , desugarer
@@ -12,7 +12,7 @@ module Desugarer (
     , scanTravL
     , scanTravR
 ) where
-import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef))
+import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode))
 import Data.Function ((&))
 import Control.Arrow (second, (>>>))
 import qualified Data.Set as S
@@ -22,6 +22,7 @@ import Data.List (mapAccumL, mapAccumR)
 
 data NodeLL metaData
     = Var String 
+    | IntNodeLL Int
     | Func String (NodeLLWithMetaData metaData)
     | Apply (NodeLLWithMetaData metaData) (NodeLLWithMetaData metaData)
     | Null (NodeLLWithMetaData metaData)
@@ -36,6 +37,7 @@ instance Functor NodeLL where
         Apply (funcContextL, func, funcContextR) (argContextL, arg, argContextR) 
             -> Apply (f funcContextL, f <$> func, f funcContextR) (f argContextL, f <$> arg, f argContextR)
         Null (contextL, x, contextR) -> Null (f contextL, f <$> x, f contextR)
+        IntNodeLL int -> IntNodeLL int
 
 instance Foldable NodeLL where 
     foldMap f node = case node of
@@ -44,6 +46,7 @@ instance Foldable NodeLL where
         Apply (funcContextL, func, funcContextR) (argContextL, arg, argContextR) 
             -> f funcContextL <> f `foldMap` func <> f funcContextR <> f argContextL <> f `foldMap` arg <> f argContextR
         Null (contextL, x, contextR) -> f contextL <> f `foldMap` x <> f contextR
+        IntNodeLL _ -> mempty
 
 instance Traversable NodeLL where 
     traverse f node = case node of 
@@ -52,6 +55,7 @@ instance Traversable NodeLL where
         Apply (funcContextL, func, funcContextR) (argContextL, arg, argContextR) 
             -> Apply <$> ((,,) <$> f funcContextL <*> f `traverse` func <*> f funcContextR) <*> ((,,) <$> f argContextL <*> f `traverse` arg <*> f argContextR)
         Null (contextL, x, contextR) -> Null <$> ((,,) <$> f contextL <*> f `traverse` x <*> f contextR)
+        IntNodeLL int -> pure $ IntNodeLL int
 
 data Context = Context {
     linNum :: Int 
@@ -121,8 +125,8 @@ withActionL context action = withAction context action noAction
 withActionR :: (Int, Int) -> ContextAction -> NodeLL ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
 withActionR context = withAction context noAction
 
--- withContext :: (Int, Int) -> NodeLL ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
--- withContext context = withAction context noAction noAction
+withContext :: (Int, Int) -> NodeLL ((Int, Int), ContextAction, Context) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
+withContext context = withAction context noAction noAction
 
 buildVars :: String -> (Int, Int) -> NodeLLWithMetaData ((Int, Int), ContextAction, Context)
 buildVars varname context = Var varname & withActionR context noAction 
@@ -152,6 +156,7 @@ desugarer (context, node) = case node of
         (\(varname, definition) innerExpr -> buildApply (buildFunc varname innerExpr context) definition context) 
         (desugarer expr) 
         (second desugarer <$> defs)
+    IntNode int -> IntNodeLL int & withContext context
 
 cleanContext :: ((Int, Int), ContextAction, Context) -> (ContextAction, Context)
 cleanContext ((linNum, colNum), action, context) = (action, context {

@@ -1,30 +1,33 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
-    Node(Variable, Function, Call, VariableDef)
+    Node(Variable, Function, Call, VariableDef, IntNode)
     , NodeWithMetaData
     , parser
     , parseExpr
 ) where
     
 import Operation (Operation, eitherOutput, idOperation)
-import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep))
+import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral))
 import Control.Applicative (many, asum, Alternative (some))
 import CharOperation (filterChar)
 import Data.Function ((&))
 import Control.Arrow ((>>>), Arrow (first, second))
 import Util (dupFirst, mix)
+import Data.Functor ((<&>))
 
 data Node
     = Variable String
     | Function [String] NodeWithMetaData
     | Call NodeWithMetaData [NodeWithMetaData]
     | VariableDef [(String, NodeWithMetaData)] NodeWithMetaData
+    | IntNode Int
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
     show (Function args (_, body)) = show ("func", args, body)
     show (Call (_, func) args') = let args = fmap snd args' in show ("call", func, args)
     show (VariableDef vars' (_, body)) = let var = second snd <$> vars' in show ("def", var, body)
+    show (IntNode int) = show ("int", int)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -61,6 +64,16 @@ parseIdentifier = idOperation & eitherOutput id (fmap sequenceA $ \case
 parseVariable :: ParserComponent
 parseVariable = second Variable <$> parseIdentifier
 
+parseIntLiteral :: Operation String ((Int,Int), Token) ((Int,Int), Int)
+parseIntLiteral = idOperation & eitherOutput id (fmap sequenceA $ \case
+    (metaData, IntLiteral intLiteral) -> (metaData, Right intLiteral)
+    ((lineNum, colNum), token) -> ((lineNum, colNum),
+        Left $ "At line " ++ show lineNum ++ ", and column " ++ show colNum ++ " : Token " ++show token ++ " is not an int literal")
+    )
+
+parseIntNode :: ParserComponent
+parseIntNode = parseIntLiteral <&> second IntNode
+
 parseFunc :: ParserComponent
 parseFunc = (\args' (metaData, expr)->let args = snd <$> args' in (metaData, Function args (metaData, expr))) 
     <$ matchToken LambdaL <*> some parseIdentifier <* matchToken LambdaR <*> parseExpr
@@ -78,7 +91,7 @@ parseVariableDef =
 -- to avoid recursive calls
 -- pretty much anything that can be put into a function call without parenthesis
 parseUnit :: ParserComponent
-parseUnit = asum [parseParen, parseVariable, parseFunc, parseVariableDef]
+parseUnit = asum [parseParen, parseVariable, parseFunc, parseVariableDef, parseIntNode]
 
 liftWithMetaData :: ((a, b1) -> b2 -> c) -> (a, b1) -> b2 -> (a, c)
 liftWithMetaData f = curry (first dupFirst >>> mix >>> second (uncurry f))

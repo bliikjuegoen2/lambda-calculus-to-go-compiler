@@ -2,10 +2,9 @@ module GoCodeGen (
     goCodeGen
     , goCodeGenBoilerPlate
 ) where
-import OpCode (OpCode (JumpAddr, PushVar, Pop, Exit, PushFunc, Call, Ret))
+import OpCode (OpCode (JumpAddr, PushVar, Pop, Exit, PushFunc, Call, Ret, PushInt))
 import Data.Functor ((<&>))
 import Data.Function ((&))
-import Data.List (intercalate)
 
 
 goCodeGen :: OpCode -> String
@@ -75,6 +74,11 @@ goCodeGen Pop = "\
 \\tstack[stack_ptr + scope_ptr] = nil\n\
 \\tstack_ptr -= 1\n"
 goCodeGen Exit = "\treturn\n"
+goCodeGen (PushInt int) = "\
+\\tstack_ptr += 1\n\
+\\tstack[scope_ptr + stack_ptr] = WrappedInt{\n\
+\\t\tnum: " ++ show int ++ ",\n\
+\\t}\n"
 -- goCodeGen _ = ""
 
 goCodeGenBoilerPlate :: Int -> String -> String
