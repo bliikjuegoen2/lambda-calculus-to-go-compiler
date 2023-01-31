@@ -1,13 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
-    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement)
+    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure)
     , NodeWithMetaData
     , parser
     , parseExpr
 ) where
     
 import Operation (Operation, eitherOutput, idOperation)
-import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END))
+import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE))
 import Control.Applicative (many, asum, Alternative (some))
 import CharOperation (filterChar)
 import Data.Function ((&))
@@ -22,6 +22,8 @@ data Node
     | VariableDef [(String, NodeWithMetaData)] NodeWithMetaData
     | IntNode Int
     | IfStatement NodeWithMetaData NodeWithMetaData NodeWithMetaData
+    | Closure NodeWithMetaData
+    | EvalClosure NodeWithMetaData
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
@@ -30,6 +32,8 @@ instance Show Node where
     show (VariableDef vars' (_, body)) = let var = second snd <$> vars' in show ("def", var, body)
     show (IntNode int) = show ("int", int)
     show (IfStatement cond ifTrue ifFalse) = show ("if", cond, "then", ifTrue, "else", ifFalse)
+    show (Closure expr) = show ("[",expr,"]")
+    show (EvalClosure expr) = show ("*", expr)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -99,11 +103,18 @@ parseIfStatement :: ParserComponent
 parseIfStatement = (\cond ifTrue ifFalse-> (fst cond, IfStatement cond ifTrue ifFalse)) 
     <$ matchToken IF <*> parseExpr <* matchToken THEN <*> parseExpr <* matchToken ELSE <*> parseExpr <* matchToken END
 
+parseClosure :: ParserComponent
+parseClosure = (\expr->(fst expr, Closure expr)) 
+    <$ matchToken CLOSURE <*> parseExpr
+
+parseEvalClosure :: ParserComponent
+parseEvalClosure = (\expr->(fst expr, EvalClosure expr)) 
+    <$ matchToken RUNCLOSURE <*> parseExpr
 
 -- to avoid recursive calls
 -- pretty much anything that can be put into a function call without parenthesis
 parseUnit :: ParserComponent
-parseUnit = asum [parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
+parseUnit = asum [parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
 
 liftWithMetaData :: ((a, b1) -> b2 -> c) -> (a, b1) -> b2 -> (a, c)
 liftWithMetaData f = curry (first dupFirst >>> mix >>> second (uncurry f))

@@ -1,9 +1,11 @@
 module Tokenizer (
-    Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END)
+    Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, 
+        Set, In, Sep, IntLiteral, IF, THEN, ELSE, END,
+        CLOSURE, RUNCLOSURE)
     , Tokenizer
     , tokenizer
 ) where
-import Operation (Operation (runOperation), filterOutput)
+import Operation (Operation, filterOutput)
 import CharOperation (filterChar)
 import Control.Arrow ((>>>), Arrow (first, second))
 import Control.Applicative (some, Alternative (many, (<|>)), asum)
@@ -27,6 +29,8 @@ data Token
     | THEN 
     | ELSE
     | END
+    | CLOSURE 
+    | RUNCLOSURE
     deriving (Show, Eq)
 
 type Tokenizer = Operation String ((Int,Int), Char) [((Int,Int), Token)]
@@ -38,7 +42,7 @@ errorMessage typeOfToken ((lineNum, columnNum), char) rest' = let rest = snd <$>
             ++ " is not "++ typeOfToken ++"; there is " ++ show rest ++ " remaining\n" 
 
 isSpecial :: Char -> Bool
-isSpecial char = char `elem` "()[]"
+isSpecial char = char `elem` "()[];:!"
 
 cleanMetaData :: [((Int, Int), d)] -> ((Int, Int), [d])
 cleanMetaData = fmap (first Location) >>> sequenceA >>> first getLocation
@@ -80,6 +84,8 @@ getSpecialChars = asum $ uncurry getSpecial <$> [
     , ('[', LambdaL)
     , (']', LambdaR)
     , (';', Sep)
+    , (':', CLOSURE)
+    , ('!', RUNCLOSURE)
     ]
 
 getKeyword :: String -> Token -> TokenizerComponent

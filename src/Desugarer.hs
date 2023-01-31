@@ -12,7 +12,7 @@ module Desugarer (
     , scanTravL
     , scanTravR
 ) where
-import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement))
+import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure))
 import Data.Function ((&))
 import Control.Arrow (second, (>>>))
 import qualified Data.Set as S
@@ -158,7 +158,11 @@ desugarer (context, node) = case node of
         (second desugarer <$> defs)
     IntNode int -> IntNodeLL int & withContext context
     IfStatement cond ifTrue ifFalse -> 
-        desugarer (context, Call (context, Variable "if'") [cond, ifTrue, ifFalse])
+        desugarer (context, EvalClosure (context, Call (context, Variable "if'") [cond, ifTrue, ifFalse]))
+    Closure expr -> 
+        desugarer (context, Function ["!"] expr)
+    EvalClosure expr ->
+        desugarer (context, Call expr [(context, IntNode 0)])
 
 cleanContext :: ((Int, Int), ContextAction, Context) -> (ContextAction, Context)
 cleanContext ((linNum, colNum), action, context) = (action, context {
