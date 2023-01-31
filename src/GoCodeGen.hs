@@ -19,10 +19,14 @@ goCodeGen (PushFunc captureNum funcPTR) = "\treg = WrappedFunction{\n\
 \\t\t\tstack[stack_ptr + scope_ptr - " ++ show capturePTR ++ "],\n")) & concat) ++ "\
 \\t\t},\n\
 \\t}\n\
+\\tfor i := 0; i < " ++ show (captureNum - 1) ++ "; i += 1 {\n\
+\\t\tstack[stack_ptr + scope_ptr - i] = nil\n\
+\\t}\n\
 \\tstack_ptr -= (" ++ show (captureNum - 1) ++ ")\n\
 \\tstack[stack_ptr + scope_ptr] = reg\n"
 goCodeGen (Call returnAddr) = "\
 \\treg = stack[stack_ptr + scope_ptr]\n\
+\\tstack[stack_ptr + scope_ptr] = nil\n\
 \\tstack_ptr -= 1\n\
 \\tswitch reg_unwrapped := reg.(type) {\n\
 \\tcase WrappedFunction:\n\
@@ -56,6 +60,9 @@ goCodeGen (Ret argCount) = "\
 \\treg = stack[stack_ptr + scope_ptr]\n\
 \\tswitch prev_scope_ptr := stack[scope_ptr + 1].(type) {\n\
 \\tcase WrappedInt:\n\
+\\t\tfor i := stack_ptr; i > -(" ++ show (argCount - 1) ++ "); i -= 1 {\n\
+\\t\t\tstack[scope_ptr + i] = nil\n\
+\\t\t}\n\
 \\t\tstack_ptr = scope_ptr - prev_scope_ptr.num - "++ show (argCount - 1) ++"\n\
 \\t\tscope_ptr = prev_scope_ptr.num\n\
 \\t\tstack[stack_ptr + scope_ptr] = reg\n\
@@ -64,7 +71,9 @@ goCodeGen (Ret argCount) = "\
 \\t\treturn\n\
 \\t}\n\
 \\tgoto JUMP\n"
-goCodeGen Pop = "\tstack_ptr -= 1\n"
+goCodeGen Pop = "\
+\\tstack[stack_ptr + scope_ptr] = nil\n\
+\\tstack_ptr -= 1\n"
 goCodeGen Exit = "\treturn\n"
 -- goCodeGen _ = ""
 
