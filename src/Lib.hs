@@ -28,6 +28,8 @@ compiler = withLocation id `pipe` tokenizer `pipe` parser
     >>> fmap (dup >>> first (foldl' (\maxJumpAddr-> \case 
         JumpAddr jumpAddr -> maxJumpAddr `max` jumpAddr
         _ -> maxJumpAddr
-    ) (0 :: Int)) >>> second (>>= goCodeGen) >>> uncurry goCodeGenBoilerPlate)
+    ) (0 :: Int)) 
+    >>> second (>>= goCodeGen) >>> uncurry goCodeGenBoilerPlate
+    )
     )
 
