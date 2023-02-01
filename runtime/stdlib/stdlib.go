@@ -11,24 +11,66 @@ func Print(x core.Wrapped) core.Wrapped {
 	return core.MakeInt(0)
 }
 
-func Plus(a core.Wrapped, b core.Wrapped) core.Wrapped {
-	var x int
-	var y int
+func unwrap(a core.Wrapped, b core.Wrapped, x *int, y *int) bool {
 	switch unwrapped_a := a.(type) {
 	case core.WrappedInt:
-		x = unwrapped_a.GetInt()
+		*x = unwrapped_a.GetInt()
 	default:
 		fmt.Println("type error")
-		return core.MakeInt(0)
+		return true
 	}
 
 	switch unwrapped_b := b.(type) {
 	case core.WrappedInt:
-		y = unwrapped_b.GetInt()
+		*y = unwrapped_b.GetInt()
 	default:
 		fmt.Println("type error")
+		return true
+	}
+
+	return false
+}
+
+func Plus(a core.Wrapped, b core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
 		return core.MakeInt(0)
 	}
 
 	return core.MakeInt(x + y)
+}
+
+func Minus(a core.Wrapped, b core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
+		return core.MakeInt(0)
+	}
+
+	return core.MakeInt(x - y)
+}
+
+func Multiply(a core.Wrapped, b core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
+		return core.MakeInt(0)
+	}
+
+	return core.MakeInt(x * y)
+}
+
+func Divide(a core.Wrapped, b core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
+		return core.MakeInt(0)
+	}
+
+	return core.MakeInt(x / y)
 }
