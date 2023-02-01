@@ -3,7 +3,7 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/bliikjuegoen2/runtime/core"
+	"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/runtime/core"
 )
 
 func Print(x core.Wrapped) core.Wrapped {
