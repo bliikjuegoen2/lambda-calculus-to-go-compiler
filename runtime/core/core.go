@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -49,31 +48,4 @@ func (num WrappedInt) GetInt() int {
 
 func (i WrappedInt) Show() string {
 	return strconv.FormatInt(int64(i.num), 10)
-}
-
-func Print(x Wrapped) Wrapped {
-	fmt.Println(x.Show())
-	return MakeInt(0)
-}
-
-func Plus(a Wrapped, b Wrapped) Wrapped {
-	var x int
-	var y int
-	switch unwrapped_a := a.(type) {
-	case WrappedInt:
-		x = unwrapped_a.GetInt()
-	default:
-		fmt.Println("type error")
-		return MakeInt(0)
-	}
-
-	switch unwrapped_b := b.(type) {
-	case WrappedInt:
-		y = unwrapped_b.GetInt()
-	default:
-		fmt.Println("type error")
-		return MakeInt(0)
-	}
-
-	return MakeInt(x + y)
 }
