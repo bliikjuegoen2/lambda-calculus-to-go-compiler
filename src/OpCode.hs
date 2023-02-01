@@ -4,7 +4,7 @@ module OpCode (
     buildIntructions
     , initContext
     , Context(funcs)
-    , OpCode(PushVar, PushFunc, Call, Ret, JumpAddr, Pop, Exit, PushInt)
+    , OpCode(PushVar, PushFunc, Call, Ret, JumpAddr, Pop, Exit, PushInt, CallBuiltIn)
 ) where
 
 import qualified Desugarer as D
@@ -22,6 +22,7 @@ data OpCode
     | Pop
     | JumpAddr Int
     | Exit
+    | CallBuiltIn Int String String
     deriving Show 
 
 data Context = Context {
@@ -85,6 +86,7 @@ buildIntruction context (nodeContext, node, _) = case node of
         return (context'', arg ++ func ++ [Call jumpAddr, JumpAddr jumpAddr])
     D.Null node' -> buildIntruction context node'
     D.IntNodeLL int -> return (context, [PushInt int])
+    D.RunBuiltInLL argc package symbol -> return  (context, [CallBuiltIn argc package symbol])
     where 
                 jumpAddr = (+) <$> D.funcCount <*> D.funcCallCount $ nodeContext
 

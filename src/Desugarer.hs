@@ -1,5 +1,5 @@
 module Desugarer (
-    NodeLL(Var, Func, Apply, Null, IntNodeLL)
+    NodeLL(Var, Func, Apply, Null, IntNodeLL, RunBuiltInLL)
     , NodeLLWithMetaData
     , Context(linNum, colNum, refVars, variables, funcCount, funcCallCount)
     , desugarer
@@ -12,13 +12,14 @@ module Desugarer (
     , scanTravL
     , scanTravR
 ) where
-import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure))
+import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn))
 import Data.Function ((&))
 import Control.Arrow (second, (>>>))
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Bool.HT (if')
 import Data.List (mapAccumL, mapAccumR)
+import Data.Functor ((<&>))
 
 data NodeLL metaData
     = Var String 
@@ -26,6 +27,7 @@ data NodeLL metaData
     | Func String (NodeLLWithMetaData metaData)
     | Apply (NodeLLWithMetaData metaData) (NodeLLWithMetaData metaData)
     | Null (NodeLLWithMetaData metaData)
+    | RunBuiltInLL Int String String
     deriving Show
 
 type NodeLLWithMetaData metaData = (metaData, NodeLL metaData, metaData)
@@ -38,6 +40,7 @@ instance Functor NodeLL where
             -> Apply (f funcContextL, f <$> func, f funcContextR) (f argContextL, f <$> arg, f argContextR)
         Null (contextL, x, contextR) -> Null (f contextL, f <$> x, f contextR)
         IntNodeLL int -> IntNodeLL int
+        RunBuiltInLL argc package symbol -> RunBuiltInLL argc package symbol
 
 instance Foldable NodeLL where 
     foldMap f node = case node of
@@ -47,6 +50,7 @@ instance Foldable NodeLL where
             -> f funcContextL <> f `foldMap` func <> f funcContextR <> f argContextL <> f `foldMap` arg <> f argContextR
         Null (contextL, x, contextR) -> f contextL <> f `foldMap` x <> f contextR
         IntNodeLL _ -> mempty
+        RunBuiltInLL {} -> mempty
 
 instance Traversable NodeLL where 
     traverse f node = case node of 
@@ -56,6 +60,7 @@ instance Traversable NodeLL where
             -> Apply <$> ((,,) <$> f funcContextL <*> f `traverse` func <*> f funcContextR) <*> ((,,) <$> f argContextL <*> f `traverse` arg <*> f argContextR)
         Null (contextL, x, contextR) -> Null <$> ((,,) <$> f contextL <*> f `traverse` x <*> f contextR)
         IntNodeLL int -> pure $ IntNodeLL int
+        RunBuiltInLL argc package symbol -> pure $ RunBuiltInLL argc package symbol
 
 data Context = Context {
     linNum :: Int 
@@ -163,6 +168,8 @@ desugarer (context, node) = case node of
         desugarer (context, Function ["$"] expr)
     EvalClosure expr ->
         desugarer (context, Call expr [(context, IntNode 0)])
+    BuiltIn argc package symbol -> desugarer (context, Function ([1..argc] <&> show) (context, RunBuiltIn argc package symbol))
+    RunBuiltIn argc package symbol -> RunBuiltInLL argc package symbol & withContext context
 
 cleanContext :: ((Int, Int), ContextAction, Context) -> (ContextAction, Context)
 cleanContext ((linNum, colNum), action, context) = (action, context {

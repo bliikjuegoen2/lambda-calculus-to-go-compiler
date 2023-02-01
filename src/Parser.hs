@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
-    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn)
+    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn)
     , NodeWithMetaData
     , parser
     , parseExpr
@@ -24,7 +24,8 @@ data Node
     | IfStatement NodeWithMetaData NodeWithMetaData NodeWithMetaData
     | Closure NodeWithMetaData
     | EvalClosure NodeWithMetaData
-    | BuiltIn Int String 
+    | BuiltIn Int String String 
+    | RunBuiltIn Int String String -- used for desugaring - parser shouldn't generate this node
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
@@ -35,7 +36,8 @@ instance Show Node where
     show (IfStatement cond ifTrue ifFalse) = show ("if", cond, "then", ifTrue, "else", ifFalse)
     show (Closure expr) = show ("[",expr,"]")
     show (EvalClosure expr) = show ("*", expr)
-    show (BuiltIn argc symbol) = show("builtin", argc, symbol)
+    show (BuiltIn package argc symbol) = show("builtin", package, argc, symbol)
+    show (RunBuiltIn package argc symbol) = show("run-builtin", package, argc, symbol)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -45,7 +47,7 @@ type ParserComponent = Operation String ((Int,Int), Token) NodeWithMetaData
 parseToken :: Token -> Operation String ((Int,Int), Token) ((Int,Int), Token)
 parseToken matched = filterChar errorMessage (snd >>> (matched ==))
     where 
-        errorMessage ((lineNum, colNum),token) rest' = 
+        errorMessage ((lineNum, colNum),token) _ = 
             -- let rest = snd <$> rest' in 
                 "At line " ++ show lineNum ++ ", and column " ++ show colNum ++ " : Token " ++ show token 
             ++ " does not match " ++ show matched ++ ";\n" 
@@ -58,7 +60,7 @@ parseToken matched = filterChar errorMessage (snd >>> (matched ==))
 matchToken :: (Show a1, Show a2, Eq a3, Show a3) => a3 -> Operation String ((a1, a2), a3) ((a1, a2), a3)
 matchToken matched = filterChar errorMessage (snd >>> (matched ==))
     where 
-        errorMessage ((lineNum, columnNum), token) rest' = 
+        errorMessage ((lineNum, columnNum), token) _ = 
             -- let rest = snd <$> rest' in 
             "At line " ++ show lineNum ++ ", and column " ++ show columnNum ++ " : Token " ++ show token ++ " does not match " 
             ++ show matched  ++ ";\n" 
@@ -114,8 +116,8 @@ parseEvalClosure = (\expr->(fst expr, EvalClosure expr))
     <$ matchToken RUNCLOSURE <*> parseExpr
 
 parseBuiltIn :: ParserComponent
-parseBuiltIn = (\(context, argc) (_, symbol)-> (context, BuiltIn argc symbol)) 
-    <$ matchToken BUILTIN <*> parseIntLiteral <*> parseIdentifier
+parseBuiltIn = (\(context, argc) (_, package) (_, symbol)-> (context, BuiltIn argc package symbol)) 
+    <$ matchToken BUILTIN <*> parseIntLiteral <*> parseIdentifier <*> parseIdentifier
 
 -- to avoid recursive calls
 -- pretty much anything that can be put into a function call without parenthesis
