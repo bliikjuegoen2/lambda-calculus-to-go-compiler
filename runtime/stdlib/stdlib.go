@@ -74,3 +74,48 @@ func Divide(a core.Wrapped, b core.Wrapped) core.Wrapped {
 
 	return core.MakeInt(x / y)
 }
+
+func Equal(a core.Wrapped, b core.Wrapped, ifTrue core.Wrapped, ifFalse core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
+		return core.MakeInt(0)
+	}
+
+	if x == y {
+		return ifTrue
+	} else {
+		return ifFalse
+	}
+}
+
+func LessThan(a core.Wrapped, b core.Wrapped, ifTrue core.Wrapped, ifFalse core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
+		return core.MakeInt(0)
+	}
+
+	if x < y {
+		return ifTrue
+	} else {
+		return ifFalse
+	}
+}
+
+func GreaterThan(a core.Wrapped, b core.Wrapped, ifTrue core.Wrapped, ifFalse core.Wrapped) core.Wrapped {
+	var x int
+	var y int
+
+	if unwrap(a, b, &x, &y) {
+		return core.MakeInt(0)
+	}
+
+	if x > y {
+		return ifTrue
+	} else {
+		return ifFalse
+	}
+}
