@@ -1,4 +1,4 @@
-package goRuntime
+package runtime
 
 import (
 	"fmt"

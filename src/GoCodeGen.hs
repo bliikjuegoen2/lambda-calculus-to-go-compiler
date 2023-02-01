@@ -14,9 +14,9 @@ goCodeGen (JumpAddr jumpAddr) = "JUMP_ADDR_"++show jumpAddr++":\n\
 goCodeGen (PushVar varPTR) = "\tstack_ptr += 1\n\
 \\tstack[stack_ptr + scope_ptr] = stack[scope_ptr - " ++ show varPTR ++ "]\n"
 goCodeGen (PushFunc captureNum funcPTR) = "\
-\\treg = goRuntime.MakeFunction(\n\
+\\treg = runtime.MakeFunction(\n\
 \\t\t" ++ show funcPTR ++ ",\n\
-\\t\t[]goRuntime.Wrapped{\n" ++ (((if captureNum <= 0 then [] else [0..captureNum - 1]) <&> (\capturePTR->"\
+\\t\t[]runtime.Wrapped{\n" ++ (((if captureNum <= 0 then [] else [0..captureNum - 1]) <&> (\capturePTR->"\
 \\t\t\tstack[stack_ptr + scope_ptr - " ++ show capturePTR ++ "],\n")) & concat) ++ "\
 \\t\t},\n\
 \\t)\n\
@@ -30,14 +30,14 @@ goCodeGen (Call returnAddr) = "\
 \\tstack[stack_ptr + scope_ptr] = nil\n\
 \\tstack_ptr -= 1\n\
 \\tswitch reg_unwrapped := reg.(type) {\n\
-\\tcase goRuntime.WrappedFunction:\n\
+\\tcase runtime.WrappedFunction:\n\
 \\t\tfor i := len(reg_unwrapped.Context()) - 1; i >= 0 ; i -= 1 {\n\
 \\t\t\tstack_ptr += 1\n\
 \\t\t\tstack[stack_ptr + scope_ptr] = reg_unwrapped.Context()[i]\n\
 \\t\t}\n\
 \\t\tstack_ptr += 1\n\
-\\t\tstack[stack_ptr + scope_ptr] = goRuntime.MakeInt("++ show returnAddr ++ ")\n\
-\\t\tstack[stack_ptr + scope_ptr + 1] = goRuntime.MakeInt(scope_ptr)\n\
+\\t\tstack[stack_ptr + scope_ptr] = runtime.MakeInt("++ show returnAddr ++ ")\n\
+\\t\tstack[stack_ptr + scope_ptr + 1] = runtime.MakeInt(scope_ptr)\n\
 \\t\tjump_addr = reg_unwrapped.FuncAddr()\n\
 \\t\tscope_ptr = scope_ptr + stack_ptr\n\
 \\t\tstack_ptr = 1\n\
@@ -48,7 +48,7 @@ goCodeGen (Call returnAddr) = "\
 \\tgoto JUMP\n"
 goCodeGen (Ret argCount) = "\
 \\tswitch ret_addr := stack[scope_ptr].(type) {\n\
-\\tcase goRuntime.WrappedInt:\n\
+\\tcase runtime.WrappedInt:\n\
 \\t\tjump_addr = ret_addr.GetInt()\n\
 \\tdefault:\n\
 \\t\tfmt.Println(\"type error: \" + ret_addr.Show() + \" is not an int\")\n\
@@ -56,7 +56,7 @@ goCodeGen (Ret argCount) = "\
 \\t}\n\
 \\treg = stack[stack_ptr + scope_ptr]\n\
 \\tswitch prev_scope_ptr := stack[scope_ptr + 1].(type) {\n\
-\\tcase goRuntime.WrappedInt:\n\
+\\tcase runtime.WrappedInt:\n\
 \\t\tfor i := stack_ptr; i > -(" ++ show (argCount - 1) ++ "); i -= 1 {\n\
 \\t\t\tstack[scope_ptr + i] = nil\n\
 \\t\t}\n\
@@ -74,10 +74,10 @@ goCodeGen Pop = "\
 goCodeGen Exit = "\treturn\n"
 goCodeGen (PushInt int) = "\
 \\tstack_ptr += 1\n\
-\\tstack[scope_ptr + stack_ptr] = goRuntime.MakeInt(" ++ show int ++ ")\n"
+\\tstack[scope_ptr + stack_ptr] = runtime.MakeInt(" ++ show int ++ ")\n"
 goCodeGen (CallBuiltIn argc package symbol) = "\
 \\treg = " ++ package ++ "." ++ symbol ++ "(\n"
-    ++ ([1..argc] <&> (show >>> ("\t\tstack[stack_ptr + scope_ptr - " ++) >>> (++ "],\n")) & concat) ++ "\
+    ++ ([1..argc] <&> (show >>> ("\t\tstack[scope_ptr - " ++) >>> (++ "],\n")) & concat) ++ "\
 \\t)\n\
 \\tstack_ptr += 1\n\
 \\tstack[scope_ptr + stack_ptr] = reg\n"
@@ -89,15 +89,15 @@ goCodeGenBoilerPlate jumpAddrNum code = "\
 \package main\n\
 \\n\
 \import \"fmt\"\n\
-\import goRuntime \"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/go-runtime\"\n\
+\import \"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/runtime\"\n\
 \\n\
 \func main() {\n\
 \\n\
 \\tvar jump_addr int = 0\n\
-\\tvar stack []goRuntime.Wrapped = make([]goRuntime.Wrapped, 1000)\n\
+\\tvar stack []runtime.Wrapped = make([]runtime.Wrapped, 1000)\n\
 \\tvar scope_ptr int = -1\n\
 \\tvar stack_ptr int = 0\n\
-\\tvar reg goRuntime.Wrapped\n\
+\\tvar reg runtime.Wrapped\n\
 \\n\
 \JUMP:\n\
 \\n\
