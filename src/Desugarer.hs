@@ -99,6 +99,7 @@ instance Show ContextAction where
 data RefVarsAction 
     = NoRefVarsAction 
     | AddRefVar String 
+    | AddRefVars [String]
     | RemoveRefVar String
     deriving Show
 
@@ -169,7 +170,8 @@ desugarer (context, node) = case node of
     EvalClosure expr ->
         desugarer (context, Call expr [(context, IntNode 0)])
     BuiltIn argc package symbol -> desugarer (context, Function ([1..argc] <&> show) (context, RunBuiltIn argc package symbol))
-    RunBuiltIn argc package symbol -> RunBuiltInLL argc package symbol & withContext context
+    RunBuiltIn argc package symbol -> RunBuiltInLL argc package symbol & withActionR context 
+        noAction { refVarsAction = [1..argc] <&> show & AddRefVars}
 
 cleanContext :: ((Int, Int), ContextAction, Context) -> (ContextAction, Context)
 cleanContext ((linNum, colNum), action, context) = (action, context {
@@ -201,6 +203,7 @@ evalRefVars :: S.Set String -> (ContextAction, Context) -> (S.Set String, (Conte
 evalRefVars curRefVars (action, context) = case action & refVarsAction of
     NoRefVarsAction -> ret curRefVars
     AddRefVar varname -> ret $ curRefVars & S.insert varname
+    AddRefVars varnames -> ret $ curRefVars `S.union` S.fromList varnames
     RemoveRefVar varname -> ret $ curRefVars & S.delete varname
     where 
         ret newRefVars = (newRefVars, (action, context { refVars = newRefVars}))
