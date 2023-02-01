@@ -160,7 +160,7 @@ desugarer (context, node) = case node of
     IfStatement cond ifTrue ifFalse -> 
         desugarer (context, EvalClosure (context, Call (context, Variable "if'") [cond, ifTrue, ifFalse]))
     Closure expr -> 
-        desugarer (context, Function ["!"] expr)
+        desugarer (context, Function ["$"] expr)
     EvalClosure expr ->
         desugarer (context, Call expr [(context, IntNode 0)])
 
