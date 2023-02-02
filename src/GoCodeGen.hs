@@ -90,8 +90,8 @@ goCodeGenBoilerPlate jumpAddrNum code = "\
 \package main\n\
 \\n\
 \import \"fmt\"\n\
-\import \"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/runtime/core\"\n\
-\import \"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/runtime/stdlib\"\n\
+\import \"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/goruntime/core\"\n\
+\import \"github.com/bliikjuegoen2/lambda-calculus-to-go-compiler/goruntime/stdlib\"\n\
 \\n\
 \func main() {\n\
 \\n\
