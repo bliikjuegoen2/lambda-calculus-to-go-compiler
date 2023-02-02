@@ -8,7 +8,7 @@ import Operation (pipe, eitherOutput)
 import Parser (parser)
 import Data.Functor ((<&>))
 import Desugarer (desugarer, cleanContext, scanTravL, NodeLL (Null), evalFuncCount, scanTravR, evalRefVars, evalVars, evalFuncCallCount, finalizeContext)
-import Control.Arrow ((>>>), Arrow (first, second))
+import Control.Arrow ((>>>), Arrow (first, second, (&&&)))
 import qualified Data.Set as S
 import qualified Data.Map as M
 import OpCode (buildIntructions, initContext, Context (funcs), OpCode (JumpAddr))
@@ -27,11 +27,12 @@ compiler = withLocation id `pipe` tokenizer `pipe` parser
     >>> buildIntructions initContext
     ) 
     & eitherOutput id (fmap (\(context, code)-> code ++ concat (funcs context)) 
-    >>> fmap (dup >>> first (foldl' (\maxJumpAddr-> \case 
+    >>> fmap (dup >>> first (foldl' (\maxJumpAddr (_, node) -> case node of
         JumpAddr jumpAddr -> maxJumpAddr `max` jumpAddr
         _ -> maxJumpAddr
     ) (0 :: Int)) 
-    >>> second (>>= goCodeGen) >>> uncurry goCodeGenBoilerPlate
+    >>> second (>>= ((snd >>> goCodeGen) &&& (fst >>> show >>> \loc->"\t//at " ++ loc ++ "\n")) >>> uncurry (++)) 
+    >>> uncurry goCodeGenBoilerPlate
     )
     )
 

@@ -27,7 +27,7 @@ data OpCode
 
 data Context = Context {
     vars :: M.Map String Int
-    , funcs :: [[OpCode]] 
+    , funcs :: [[((Int,Int), OpCode)]] 
 } deriving Show
 
 initContext :: Context 
@@ -36,12 +36,12 @@ initContext = Context {
     , funcs = []
 }
 
-buildIntruction :: Context -> D.NodeLLWithMetaData D.Context -> Either String (Context, [OpCode])
+buildIntruction :: Context -> D.NodeLLWithMetaData D.Context -> Either String (Context, [((Int,Int),OpCode)])
 buildIntruction context (nodeContext, node, _) = case node of 
     D.Var varname -> maybe 
         (Left $ "At line " ++ show (nodeContext & D.linNum) ++ ", and column " ++ show (nodeContext & D.colNum) ++ " : variable " ++ show varname ++ "is not found")
         (\varRef->return (context, [
-            PushVar varRef
+            (location, PushVar varRef)
         ])) 
         $ context & vars & M.lookup varname
     D.Func arg body -> traverse (\captureVar-> maybe 
@@ -57,7 +57,7 @@ buildIntruction context (nodeContext, node, _) = case node of
                     (
                         count + 1, 
                         captureVars & M.insert captureVar count, 
-                        (curContext, [PushVar captureRef] ++ instrs)
+                        (curContext, [(location, PushVar captureRef)] ++ instrs)
                     )
                 ) 
                 (1 :: Int, M.empty, (context, []))
@@ -68,33 +68,37 @@ buildIntruction context (nodeContext, node, _) = case node of
                     return (
                         curContext' { 
                             funcs = ( 
-                                [JumpAddr jumpAddr] 
+                                [(location, JumpAddr jumpAddr)] 
                                 ++ funcInstrs 
-                                ++ [Ret $ count + 1]
+                                ++ [(location, Ret $ count + 1)]
                             )
                             :(curContext & funcs) 
                         }, 
-                        instrs ++ [PushFunc (count - 1) jumpAddr]
+                        instrs ++ [(location, PushFunc (count - 1) jumpAddr)]
                         )
                 )
+    
             )
             
 
     D.Apply func' arg' -> do 
         (context', arg) <- buildIntruction context arg'
         (context'', func) <- buildIntruction context' func'
-        return (context'', arg ++ func ++ [Call jumpAddr, JumpAddr jumpAddr])
+        return (context'', arg ++ func ++ [(location, Call jumpAddr), (location, JumpAddr jumpAddr)])
     D.Null node' -> buildIntruction context node'
-    D.IntNodeLL int -> return (context, [PushInt int])
-    D.RunBuiltInLL argc package symbol -> return  (context, [CallBuiltIn argc package symbol])
+    D.IntNodeLL int -> return (context, [(location, PushInt int)])
+    D.RunBuiltInLL argc package symbol -> return  (context, [(location, CallBuiltIn argc package symbol)])
     where 
                 jumpAddr = (+) <$> D.funcCount <*> D.funcCallCount $ nodeContext
+                location = nodeContext & D.getLocation
 
-buildIntructions :: Context -> [D.NodeLL D.Context] -> Either String (Context, [OpCode])
-buildIntructions context [] = return (context,[Exit])
+buildIntructions :: Context -> [D.NodeLL D.Context] -> Either String (Context, [((Int,Int),OpCode)])
+buildIntructions context [] = return (context,[((-1,-1), Exit)])
 buildIntructions context (node':nodes) = case node' of 
     D.Null node -> do 
+        let (nodellContext,_,_) = node
+        let location = nodellContext & D.getLocation
         (context', instr) <- buildIntruction context node
         (context'', instrs) <- buildIntructions context' nodes
-        return (context'', instr ++ [Pop] ++ instrs)
+        return (context'', instr ++ [(location, Pop)] ++ instrs)
     _ -> Left $ "Invalid AST: " ++ show node'

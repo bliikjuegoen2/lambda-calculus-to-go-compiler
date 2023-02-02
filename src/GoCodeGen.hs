@@ -42,7 +42,7 @@ goCodeGen (Call returnAddr) = "\
 \\t\tscope_ptr = scope_ptr + stack_ptr\n\
 \\t\tstack_ptr = 1\n\
 \\tdefault:\n\
-\\t\tfmt.Println(\"type error: \" + reg.Show() + \" is not a function\")\n\
+\\t\tfmt.Println(\"type error: \" + reg.Show() + \" is not a function; return addr - " ++ show returnAddr ++ "\")\n\
 \\t\treturn\n\
 \\t}\n\
 \\tgoto JUMP\n"

@@ -11,10 +11,11 @@ module Desugarer (
     , finalizeContext
     , scanTravL
     , scanTravR
+    , getLocation
 ) where
 import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn))
 import Data.Function ((&))
-import Control.Arrow (second, (>>>))
+import Control.Arrow (second, (>>>), Arrow ((***), (&&&)))
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Bool.HT (if')
@@ -84,6 +85,9 @@ initContext = Context {
     , refVars = S.empty
     , variables = M.empty 
 }
+
+getLocation :: Context -> (Int,Int) 
+getLocation = linNum &&& colNum
 
 data ContextAction = ContextAction {
     isIncrementingFuncCount :: Bool
