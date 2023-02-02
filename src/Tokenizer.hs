@@ -1,7 +1,7 @@
 module Tokenizer (
     Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, 
         Set, In, Sep, IntLiteral, IF, THEN, ELSE, END,
-        CLOSURE, RUNCLOSURE, BUILTIN, BLOCK)
+        CLOSURE, RUNCLOSURE, BUILTIN, BLOCK,INFIXL, INFIXR)
     , Tokenizer
     , tokenizer
 ) where
@@ -33,6 +33,8 @@ data Token
     | RUNCLOSURE
     | BUILTIN
     | BLOCK 
+    | INFIXL
+    | INFIXR
     deriving (Show, Eq)
 
 type Tokenizer = Operation String ((Int,Int), Char) [((Int,Int), Token)]
@@ -88,6 +90,8 @@ getSpecialChars = asum $ uncurry getSpecial <$> [
     , (';', Sep)
     , (':', CLOSURE)
     , ('$', RUNCLOSURE)
+    , ('<', INFIXL)
+    , ('>', INFIXR)
     ]
 
 getKeyword :: String -> Token -> TokenizerComponent

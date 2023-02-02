@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
     Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, 
-        BuiltIn, RunBuiltIn, Block, RecursiveFunc)
+        BuiltIn, RunBuiltIn, Block, RecursiveFunc, Infixes)
     , NodeWithMetaData
     , parser
     , parseExpr
@@ -9,7 +9,7 @@ module Parser (
 ) where
     
 import Operation (Operation, eitherOutput, idOperation, filterOutput)
-import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN, BLOCK))
+import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN, BLOCK, INFIXL, INFIXR))
 import Control.Applicative (many, asum, Alternative (some))
 import CharOperation (filterChar)
 import Data.Function ((&))
@@ -30,6 +30,7 @@ data Node
     | RunBuiltIn Int String String -- used for desugaring - parser shouldn't generate this node
     | Block [NodeWithMetaData]
     | RecursiveFunc [String] NodeWithMetaData
+    | Infixes NodeWithMetaData [(NodeWithMetaData,NodeWithMetaData)]
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
@@ -44,6 +45,7 @@ instance Show Node where
     show (RunBuiltIn package argc symbol) = show("run-builtin", package, argc, symbol)
     show (Block code) = show("block", code)
     show (RecursiveFunc args (_, body)) = show("rec-func", args, body)
+    show (Infixes node operators) = show("infixes", node, operators)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -149,9 +151,21 @@ liftWithMetaData f = curry (first dupFirst >>> mix >>> second (uncurry f))
 parseCall :: ParserComponent
 parseCall = liftWithMetaData Call <$> parseUnit <*> some parseUnit
 
+parseNonInfix :: ParserComponent
+parseNonInfix = asum [parseCall, parseUnit]
+
+parseInfix :: ParserComponent
+parseInfix = (\node infixes->(fst node, Infixes node infixes)) 
+        <$> parseNonInfix <*> some parseInfixes
+    where 
+        parseInfixes = (,) 
+            <$ matchToken INFIXL
+            <*> parseExpr 
+            <* matchToken INFIXR
+            <*> parseNonInfix
 
 parseExpr :: ParserComponent
-parseExpr = asum [parseCall, parseUnit]
+parseExpr = asum [parseInfix, parseNonInfix]
 
 parser :: Parser
 parser = some parseExpr
