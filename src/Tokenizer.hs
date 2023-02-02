@@ -1,7 +1,7 @@
 module Tokenizer (
     Token(Identifier, ParenL, ParenR, LambdaL, LambdaR, 
         Set, In, Sep, IntLiteral, IF, THEN, ELSE, END,
-        CLOSURE, RUNCLOSURE, BUILTIN)
+        CLOSURE, RUNCLOSURE, BUILTIN, BLOCK)
     , Tokenizer
     , tokenizer
 ) where
@@ -32,6 +32,7 @@ data Token
     | CLOSURE 
     | RUNCLOSURE
     | BUILTIN
+    | BLOCK 
     deriving (Show, Eq)
 
 type Tokenizer = Operation String ((Int,Int), Char) [((Int,Int), Token)]
@@ -103,6 +104,7 @@ getKeywords = asum $ uncurry getKeyword <$> [
     , ("else", ELSE)
     , ("end", END)
     , ("builtin", BUILTIN)
+    , ("block", BLOCK)
     ]  
 
 getSpace :: Operation String ((Int, Int), Char) ((Int, Int), [Char])

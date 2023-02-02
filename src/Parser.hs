@@ -1,13 +1,14 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
-    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn)
+    Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, 
+        BuiltIn, RunBuiltIn, Block)
     , NodeWithMetaData
     , parser
     , parseExpr
 ) where
     
 import Operation (Operation, eitherOutput, idOperation)
-import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN))
+import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN, BLOCK))
 import Control.Applicative (many, asum, Alternative (some))
 import CharOperation (filterChar)
 import Data.Function ((&))
@@ -26,6 +27,7 @@ data Node
     | EvalClosure NodeWithMetaData
     | BuiltIn Int String String 
     | RunBuiltIn Int String String -- used for desugaring - parser shouldn't generate this node
+    | Block [NodeWithMetaData]
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
@@ -38,6 +40,7 @@ instance Show Node where
     show (EvalClosure expr) = show ("*", expr)
     show (BuiltIn package argc symbol) = show("builtin", package, argc, symbol)
     show (RunBuiltIn package argc symbol) = show("run-builtin", package, argc, symbol)
+    show (Block code) = show("block", code)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -119,10 +122,16 @@ parseBuiltIn :: ParserComponent
 parseBuiltIn = (\(context, argc) (_, package) (_, symbol)-> (context, BuiltIn argc package symbol)) 
     <$ matchToken BUILTIN <*> parseIntLiteral <*> parseIdentifier <*> parseIdentifier
 
+parseBlock :: ParserComponent
+parseBlock = (\code->((0,0), Block code)) 
+    <$ matchToken BLOCK <*> some parseCode <* matchToken END
+    where 
+        parseCode = parseExpr <* matchToken Sep 
+
 -- to avoid recursive calls
 -- pretty much anything that can be put into a function call without parenthesis
 parseUnit :: ParserComponent
-parseUnit = asum [parseBuiltIn, parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
+parseUnit = asum [parseBlock, parseBuiltIn, parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
 
 liftWithMetaData :: ((a, b1) -> b2 -> c) -> (a, b1) -> b2 -> (a, c)
 liftWithMetaData f = curry (first dupFirst >>> mix >>> second (uncurry f))

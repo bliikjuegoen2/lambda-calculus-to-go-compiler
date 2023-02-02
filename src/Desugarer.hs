@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module Desugarer (
     NodeLL(Var, Func, Apply, Null, IntNodeLL, RunBuiltInLL)
     , NodeLLWithMetaData
@@ -13,7 +14,7 @@ module Desugarer (
     , scanTravR
     , getLocation
 ) where
-import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn))
+import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn, Block))
 import Data.Function ((&))
 import Control.Arrow (second, (>>>), Arrow ((***), (&&&)))
 import qualified Data.Set as S
@@ -176,6 +177,7 @@ desugarer (context, node) = case node of
     BuiltIn argc package symbol -> desugarer (context, Function ([1..argc] <&> show) (context, RunBuiltIn argc package symbol))
     RunBuiltIn argc package symbol -> RunBuiltInLL argc package symbol & withActionR context 
         noAction { refVarsAction = [1..argc] <&> show & AddRefVars}
+    Block code -> desugarer (context, VariableDef (code <&> ("_",)) (context, IntNode 0))
 
 cleanContext :: ((Int, Int), ContextAction, Context) -> (ContextAction, Context)
 cleanContext ((linNum, colNum), action, context) = (action, context {
