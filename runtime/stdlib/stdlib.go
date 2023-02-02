@@ -119,3 +119,9 @@ func GreaterThan(a core.Wrapped, b core.Wrapped, ifTrue core.Wrapped, ifFalse co
 		return ifFalse
 	}
 }
+
+func Input(_ core.Wrapped) core.Wrapped {
+	var x int
+	fmt.Scanf("%d", &x)
+	return core.MakeInt(x)
+}

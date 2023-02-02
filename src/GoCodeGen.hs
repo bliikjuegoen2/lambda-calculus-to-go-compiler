@@ -77,7 +77,8 @@ goCodeGen (PushInt int) = "\
 \\tstack[scope_ptr + stack_ptr] = core.MakeInt(" ++ show int ++ ")\n"
 goCodeGen (CallBuiltIn argc package symbol) = "\
 \\treg = " ++ package ++ "." ++ symbol ++ "(\n"
-    ++ ([1..argc] <&> (show >>> ("\t\tstack[scope_ptr - " ++) >>> (++ "],\n")) & concat) ++ "\
+    ++ ([(1-argc)..(-1)] <&> (show >>> ("\t\tstack[scope_ptr + (" ++) >>> (++ ")],\n")) & concat) ++ "\
+\\t\tstack[scope_ptr - "++ show argc ++"],\n\
 \\t)\n\
 \\tstack_ptr += 1\n\
 \\tstack[scope_ptr + stack_ptr] = reg\n"
