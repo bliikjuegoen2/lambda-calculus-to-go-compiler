@@ -1,13 +1,14 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser (
     Node(Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, 
-        BuiltIn, RunBuiltIn, Block)
+        BuiltIn, RunBuiltIn, Block, RecursiveFunc)
     , NodeWithMetaData
     , parser
     , parseExpr
+    , parseRecursiveFunc
 ) where
     
-import Operation (Operation, eitherOutput, idOperation)
+import Operation (Operation, eitherOutput, idOperation, filterOutput)
 import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN, BLOCK))
 import Control.Applicative (many, asum, Alternative (some))
 import CharOperation (filterChar)
@@ -28,6 +29,7 @@ data Node
     | BuiltIn Int String String 
     | RunBuiltIn Int String String -- used for desugaring - parser shouldn't generate this node
     | Block [NodeWithMetaData]
+    | RecursiveFunc [String] NodeWithMetaData
 
 instance Show Node where 
     show (Variable var) = show ("var", var)
@@ -41,6 +43,7 @@ instance Show Node where
     show (BuiltIn package argc symbol) = show("builtin", package, argc, symbol)
     show (RunBuiltIn package argc symbol) = show("run-builtin", package, argc, symbol)
     show (Block code) = show("block", code)
+    show (RecursiveFunc args (_, body)) = show("rec-func", args, body)
 
 type NodeWithMetaData = ((Int,Int), Node)
 
@@ -128,10 +131,17 @@ parseBlock = (\code->((0,0), Block code))
     where 
         parseCode = parseExpr <* matchToken Sep 
 
+parseRecursiveFunc :: ParserComponent
+parseRecursiveFunc = (\args' (metaData, expr)->let args = snd <$> args' in (metaData, RecursiveFunc args (metaData, expr)))
+    <$ matchToken LambdaL 
+    <* matchToken (Identifier "rec")
+    <*> some parseIdentifier <* matchToken LambdaR 
+    <*> parseExpr
+
 -- to avoid recursive calls
 -- pretty much anything that can be put into a function call without parenthesis
 parseUnit :: ParserComponent
-parseUnit = asum [parseBlock, parseBuiltIn, parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
+parseUnit = asum [parseRecursiveFunc, parseBlock, parseBuiltIn, parseClosure, parseEvalClosure, parseIfStatement, parseVariableDef, parseParen, parseVariable, parseFunc, parseIntNode]
 
 liftWithMetaData :: ((a, b1) -> b2 -> c) -> (a, b1) -> b2 -> (a, c)
 liftWithMetaData f = curry (first dupFirst >>> mix >>> second (uncurry f))

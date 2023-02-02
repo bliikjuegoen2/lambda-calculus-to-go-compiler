@@ -44,7 +44,7 @@ errorMessage typeOfToken ((lineNum, columnNum), char) rest' = let rest = snd <$>
             ++ " is not "++ typeOfToken ++"; there is " ++ show rest ++ " remaining\n" 
 
 isSpecial :: Char -> Bool
-isSpecial char = char `elem` "()[];:$"
+isSpecial char = char `elem` "()[];:$<>"
 
 cleanMetaData :: [((Int, Int), d)] -> ((Int, Int), [d])
 cleanMetaData = fmap (first Location) >>> sequenceA >>> first getLocation

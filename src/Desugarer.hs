@@ -14,7 +14,7 @@ module Desugarer (
     , scanTravR
     , getLocation
 ) where
-import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn, Block))
+import Parser (NodeWithMetaData, Node (Variable, Function, Call, VariableDef, IntNode, IfStatement, Closure, EvalClosure, BuiltIn, RunBuiltIn, Block, RecursiveFunc))
 import Data.Function ((&))
 import Control.Arrow (second, (>>>), Arrow ((***), (&&&)))
 import qualified Data.Set as S
@@ -178,6 +178,7 @@ desugarer (context, node) = case node of
     RunBuiltIn argc package symbol -> RunBuiltInLL argc package symbol & withActionR context 
         noAction { refVarsAction = [1..argc] <&> show & AddRefVars}
     Block code -> desugarer (context, VariableDef (code <&> ("_",)) (context, IntNode 0))
+    RecursiveFunc args body -> desugarer (context, Call (context, Variable "Y'") [(context, Function ("rec":args) body)]) 
 
 cleanContext :: ((Int, Int), ContextAction, Context) -> (ContextAction, Context)
 cleanContext ((linNum, colNum), action, context) = (action, context {
