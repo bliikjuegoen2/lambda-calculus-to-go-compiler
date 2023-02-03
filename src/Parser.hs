@@ -10,7 +10,7 @@ module Parser (
     
 import Operation (Operation, eitherOutput, idOperation, filterOutput)
 import Tokenizer (Token (ParenL, ParenR, Identifier, LambdaL, LambdaR, Set, In, Sep, IntLiteral, IF, THEN, ELSE, END, CLOSURE, RUNCLOSURE, BUILTIN, BLOCK, INFIXL, INFIXR))
-import Control.Applicative (many, asum, Alternative (some))
+import Control.Applicative (many, asum, Alternative (some, (<|>)))
 import CharOperation (filterChar)
 import Data.Function ((&))
 import Control.Arrow ((>>>), Arrow (first, second))
@@ -121,7 +121,7 @@ parseClosure = (\expr->(fst expr, Closure expr))
 
 parseEvalClosure :: ParserComponent
 parseEvalClosure = (\expr->(fst expr, EvalClosure expr)) 
-    <$ matchToken RUNCLOSURE <*> parseExpr
+    <$ matchToken RUNCLOSURE <*> (parseVariable <|> parseParen)
 
 parseBuiltIn :: ParserComponent
 parseBuiltIn = (\(context, argc) (_, package) (_, symbol)-> (context, BuiltIn argc package symbol)) 
