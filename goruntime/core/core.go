@@ -4,6 +4,24 @@ import (
 	"strconv"
 )
 
+type CPU struct {
+	JumpAddr int
+	ScopePtr int
+	StackPtr int
+	Reg      Wrapped
+	Stack    []Wrapped
+}
+
+func MakeCPU() CPU {
+	return CPU{
+		JumpAddr: 0,
+		ScopePtr: -1,
+		StackPtr: 0,
+		Reg:      nil,
+		Stack:    make([]Wrapped, 1000),
+	}
+}
+
 type Wrapped interface {
 	Show() string
 }
@@ -20,7 +38,7 @@ func MakeFunction(func_addr int, context []Wrapped) WrappedFunction {
 	}
 }
 
-func (_ WrappedFunction) Show() string {
+func (WrappedFunction) Show() string {
 	return "[function]"
 }
 
